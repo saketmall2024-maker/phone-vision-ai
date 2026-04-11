@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Phone Vision AI</title>
+
+<style>
+body {
+  margin: 0;
+  background: black;
+  overflow: hidden;
+  font-family: Arial;
+}
+
+video, canvas {
+  position: absolute;
+  width: 100vw;
+  height: 100vh;
+  object-fit: cover;
+}
+
+#label {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  color: white;
+  font-size: 28px;
+  background: rgba(0,0,0,0.5);
+  padding: 10px;
+  border-radius: 10px;
+}
+</style>
+</head>
+
+<body>
+
+<video id="video" autoplay playsinline></video>
+<canvas id="canvas"></canvas>
+<div id="label">STARTING...</div>
+
+<script>
+const video = document.getElementById("video");
+const canvas = document.getElementById("canvas");
+const ctx = canvas.getContext("2d");
+const labelBox = document.getElementById("label");
+
+// IP Webcam stream (YOUR PHONE)
+const STREAM = "http://192.168.0.101:8080/video";
+
+video.src = STREAM;
+
+video.addEventListener("loadeddata", () => {
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
+  loop();
+});
+
+function analyze(data, width){
+  let left=0, center=0, right=0;
+
+  for(let i=0;i<data.length;i+=50){
+    let r=data[i], g=data[i+1], b=data[i+2];
+
+    // simple green detection
+    if(g > 150 && r < 100 && b < 100){
+      let x = ((i/4) % width);
+
+      if(x < width/3) left++;
+      else if(x < 2*width/3) center++;
+      else right++;
+    }
+  }
+
+  if(left > center && left > right) return "LEFT GREEN";
+  if(right > left && right > center) return "RIGHT GREEN";
+  if(center > left && center > right) return "CENTER GREEN";
+
+  return "NO SIGNAL";
+}
+
+function loop(){
+  ctx.drawImage(video, 0, 0);
+
+  let frame = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  let result = analyze(frame.data, canvas.width);
+
+  labelBox.innerText = result;
+
+  requestAnimationFrame(loop);
+}
+</script>
+
+</body>
+</html>
