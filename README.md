@@ -1,13 +1,30 @@
-# phone-vision-ai
-# Phone Vision AI (IP Webcam)
 
-## Setup
-1. Install IP Webcam on phone
-2. Start server
-3. Ensure phone IP is: 192.168.0.101
-4. Open index.html in browser
 
-## Features
-- Live phone camera stream
-- Real-time pixel detection
-- Runs fully in browser
+
+# 📷 GitHub Camera AI Project
+
+This project uses browser camera + simple real-time vision processing.
+
+---
+
+## 🚀 Features
+- Live camera access using browser
+- Real-time frame processing
+- Simple color-based detection
+- Runs fully on GitHub Pages
+
+---
+
+## ⚙️ How to Run
+
+### 1. Upload to GitHub
+- Create a repo
+- Add `index.html` and `README.md`
+
+### 2. Enable GitHub Pages
+- Go to Settings → Pages
+- Source: `main` branch
+- Folder: `/root`
+
+### 3. Open link
+Example:
