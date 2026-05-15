@@ -1,36 +1,30 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>ESP Bridge Control</title>
+  <title>ESP Chat</title>
 </head>
 <body>
 
-<h2>ESP NeoPixel Control (GitHub Bridge)</h2>
+<h2>ESP Chat (GitHub UI)</h2>
 
-<button onclick="sendCmd('RED')">🔴 RED</button>
-<button onclick="sendCmd('GREEN')">🟢 GREEN</button>
-<button onclick="sendCmd('OFF')">⚫ OFF</button>
+<input type="text" id="msg" placeholder="Type message">
+<button onclick="send()">Send</button>
 
-<p id="status">Status: Idle</p>
+<br><br>
+
+<iframe id="chatbox" width="100%" height="300"></iframe>
 
 <script>
-// 🔹 IMPORTANT: Put your ESP IP here
 const espIP = "192.168.0.100";
 
-function sendCmd(cmd) {
-  document.getElementById("status").innerText = "Sending " + cmd;
-
-  fetch("http://" + espIP + "/" + cmd, {
-    method: "GET",
-    mode: "no-cors" // 🔥 IMPORTANT FIX for GitHub Pages
-  })
-  .then(() => {
-    document.getElementById("status").innerText = "Sent: " + cmd;
-  })
-  .catch(() => {
-    document.getElementById("status").innerText = "Failed!";
-  });
+function send() {
+  let msg = document.getElementById("msg").value;
+  fetch(`http://${espIP}/send?msg=${msg}`, {mode: "no-cors"});
 }
+
+setInterval(() => {
+  document.getElementById("chatbox").src = `http://${espIP}`;
+}, 2000);
 </script>
 
 </body>
