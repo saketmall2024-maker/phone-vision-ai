@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>ESP Bridge Control</title>
+</head>
+<body>
+
+<h2>ESP NeoPixel Control (GitHub Bridge)</h2>
+
+<button onclick="sendCmd('RED')">🔴 RED</button>
+<button onclick="sendCmd('GREEN')">🟢 GREEN</button>
+<button onclick="sendCmd('OFF')">⚫ OFF</button>
+
+<p id="status">Status: Idle</p>
+
+<script>
+// 🔹 IMPORTANT: Put your ESP IP here
+const espIP = "192.168.0.100";
+
+function sendCmd(cmd) {
+  document.getElementById("status").innerText = "Sending " + cmd;
+
+  fetch("http://" + espIP + "/" + cmd, {
+    method: "GET",
+    mode: "no-cors" // 🔥 IMPORTANT FIX for GitHub Pages
+  })
+  .then(() => {
+    document.getElementById("status").innerText = "Sent: " + cmd;
+  })
+  .catch(() => {
+    document.getElementById("status").innerText = "Failed!";
+  });
+}
+</script>
+
+</body>
+</html>
