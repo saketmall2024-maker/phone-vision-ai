@@ -10,6 +10,10 @@
             color: white;
         }
 
+        h1 {
+            margin-top: 20px;
+        }
+
         button, input {
             margin: 10px;
             padding: 10px;
@@ -20,7 +24,7 @@
             margin-top: 20px;
         }
 
-        img {
+        img, canvas {
             border-radius: 10px;
         }
     </style>
@@ -29,15 +33,14 @@
 <body>
 
     <h1>🔥 AI Vision Controller</h1>
+    <p>Click anywhere to start camera</p>
 
-    <button onclick="startCamera()">Start Camera</button>
-    <br>
     <input type="file" id="upload" accept="image/*">
 
     <div id="webcam-container"></div>
     <div id="image-preview"></div>
 
-    <h2 id="result">Waiting...</h2>
+    <h2 id="result">Loading model...</h2>
 
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest"></script>
     <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest"></script>
@@ -45,37 +48,53 @@
     <script>
         const URL = "https://teachablemachine.withgoogle.com/models/OEa3xEPNg/";
 
-        let model, webcam;
+        let model, webcam, started = false;
 
         async function loadModel() {
             const modelURL = URL + "model.json";
             const metadataURL = URL + "metadata.json";
+
             model = await tmImage.load(modelURL, metadataURL);
+            document.getElementById("result").innerText = "Click screen to start camera";
         }
 
         loadModel();
 
-        async function startCamera() {
-            webcam = new tmImage.Webcam(250, 250, true);
-            await webcam.setup();
-            await webcam.play();
+        // Start camera on first click (browser security requirement)
+        document.body.addEventListener("click", async () => {
+            if (started) return;
+            started = true;
 
-            document.getElementById("webcam-container").innerHTML = "";
+            document.getElementById("result").innerText = "Starting camera...";
+
+            webcam = new tmImage.Webcam(250, 250, true);
+
+            try {
+                await webcam.setup();
+                await webcam.play();
+            } catch (e) {
+                document.getElementById("result").innerText = "Camera permission denied ❌";
+                return;
+            }
+
             document.getElementById("webcam-container").appendChild(webcam.canvas);
 
             loop();
-        }
+        });
 
         async function loop() {
+            if (!webcam) return;
             webcam.update();
             await predict(webcam.canvas);
             requestAnimationFrame(loop);
         }
 
+        // Upload image handler
         document.getElementById("upload").addEventListener("change", async function(event) {
             const file = event.target.files[0];
-            const img = document.createElement("img");
+            if (!file) return;
 
+            const img = document.createElement("img");
             img.src = URL.createObjectURL(file);
             img.width = 250;
 
@@ -87,7 +106,10 @@
             };
         });
 
+        // Prediction logic (best result only)
         async function predict(image) {
+            if (!model) return;
+
             const prediction = await model.predict(image);
 
             let best = prediction[0];
