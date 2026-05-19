@@ -13,14 +13,12 @@ body {
 }
 
 #result {
-    font-size: 34px;
+    font-size: 32px;
     margin-top: 20px;
 }
-
 button {
-    padding: 10px 20px;
+    padding: 10px;
     font-size: 18px;
-    cursor: pointer;
 }
 </style>
 </head>
@@ -33,9 +31,6 @@ button {
 <div id="webcam-container"></div>
 <div id="result">Waiting...</div>
 
-<!-- ESP READABLE DATA -->
-<div id="api-data" style="display:none;"></div>
-
 <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@3.9.0/dist/tf.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@0.8/dist/teachablemachine-image.min.js"></script>
 
@@ -45,23 +40,18 @@ const URL = "https://teachablemachine.withgoogle.com/models/gWXOPXYeG/";
 let model, webcam;
 
 async function init() {
-    try {
-        const modelURL = URL + "model.json";
-        const metadataURL = URL + "metadata.json";
+    const modelURL = URL + "model.json";
+    const metadataURL = URL + "metadata.json";
 
-        model = await tmImage.load(modelURL, metadataURL);
+    model = await tmImage.load(modelURL, metadataURL);
 
-        webcam = new tmImage.Webcam(250, 250, true);
-        await webcam.setup();
-        await webcam.play();
+    webcam = new tmImage.Webcam(250, 250, true);
+    await webcam.setup();
+    await webcam.play();
 
-        document.getElementById("webcam-container").appendChild(webcam.canvas);
+    document.getElementById("webcam-container").appendChild(webcam.canvas);
 
-        loop();
-
-    } catch (err) {
-        console.error("INIT ERROR:", err);
-    }
+    loop();
 }
 
 async function loop() {
@@ -71,39 +61,47 @@ async function loop() {
 }
 
 async function predict() {
-    try {
-        const prediction = await model.predict(webcam.canvas);
+    const prediction = await model.predict(webcam.canvas);
 
-        let bestClass = "";
-        let bestProb = 0;
+    let bestClass = "";
+    let bestProb = 0;
 
-        for (let i = 0; i < prediction.length; i++) {
-            if (prediction[i].probability > bestProb) {
-                bestProb = prediction[i].probability;
-                bestClass = prediction[i].className;
-            }
+    for (let i = 0; i < prediction.length; i++) {
+        if (prediction[i].probability > bestProb) {
+            bestProb = prediction[i].probability;
+            bestClass = prediction[i].className;
         }
-
-        let output = "NOTHING";
-
-        if (bestClass.toLowerCase().includes("up")) {
-            output = "UP";
-        } 
-        else if (bestClass.toLowerCase().includes("down")) {
-            output = "DOWN";
-        }
-
-        // UI display
-        document.getElementById("result").innerHTML = output;
-
-        // ESP DATA PIPELINE
-        document.getElementById("api-data").innerText = output;
-
-        window.currentResult = output;
-
-    } catch (err) {
-        console.error("PREDICT ERROR:", err);
     }
+
+    let output = "NONE";
+
+    if (bestClass.toLowerCase().includes("up")) {
+        output = "UP";
+    } 
+    else if (bestClass.toLowerCase().includes("down")) {
+        output = "DOWN";
+    }
+
+    document.getElementById("result").innerHTML = output;
+
+    // 🔥 ESP BROADCAST HERE
+    sendToESP(output);
+}
+
+// 🔥 SEND TO ESP
+function sendToESP(state) {
+
+    let espIP = "http://192.168.1.50";  // CHANGE THIS
+
+    let cmd = "/NONE";
+
+    if (state === "UP") cmd = "/UP";
+    else if (state === "DOWN") cmd = "/DOWN";
+
+    fetch(espIP + cmd)
+    .then(res => res.text())
+    .then(data => console.log("ESP:", data))
+    .catch(err => console.log("ESP ERROR:", err));
 }
 </script>
 
