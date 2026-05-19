@@ -11,10 +11,12 @@ body {
     color: white;
     font-family: Arial;
 }
+
 #result {
     font-size: 34px;
     margin-top: 20px;
 }
+
 button {
     padding: 10px 20px;
     font-size: 18px;
@@ -31,7 +33,9 @@ button {
 <div id="webcam-container"></div>
 <div id="result">Waiting...</div>
 
-<!-- ✅ FIXED SCRIPT ORDER + VERSION -->
+<!-- ESP READABLE DATA -->
+<div id="api-data" style="display:none;"></div>
+
 <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@3.9.0/dist/tf.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@0.8/dist/teachablemachine-image.min.js"></script>
 
@@ -54,6 +58,7 @@ async function init() {
         document.getElementById("webcam-container").appendChild(webcam.canvas);
 
         loop();
+
     } catch (err) {
         console.error("INIT ERROR:", err);
     }
@@ -79,10 +84,22 @@ async function predict() {
             }
         }
 
-        document.getElementById("result").innerHTML =
-            bestClass.toUpperCase() + " (" + (bestProb * 100).toFixed(2) + "%)";
+        let output = "NOTHING";
 
-        window.currentResult = bestClass;
+        if (bestClass.toLowerCase().includes("up")) {
+            output = "UP";
+        } 
+        else if (bestClass.toLowerCase().includes("down")) {
+            output = "DOWN";
+        }
+
+        // UI display
+        document.getElementById("result").innerHTML = output;
+
+        // ESP DATA PIPELINE
+        document.getElementById("api-data").innerText = output;
+
+        window.currentResult = output;
 
     } catch (err) {
         console.error("PREDICT ERROR:", err);
