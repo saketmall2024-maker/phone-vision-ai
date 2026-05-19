@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>AI Gesture Broadcast</title>
+<title>Gesture AI</title>
 
 <style>
 body {
@@ -12,15 +12,20 @@ body {
     font-family: Arial;
 }
 #result {
-    font-size: 30px;
+    font-size: 34px;
     margin-top: 20px;
+}
+button {
+    padding: 10px 20px;
+    font-size: 18px;
+    cursor: pointer;
 }
 </style>
 </head>
 
 <body>
 
-<h2>AI Gesture Broadcast</h2>
+<h2>Gesture AI (Best Prediction Only)</h2>
 <button onclick="init()">Start</button>
 
 <div id="webcam-container"></div>
@@ -35,18 +40,24 @@ const URL = "https://teachablemachine.withgoogle.com/models/gWXOPXYeG/";
 let model, webcam;
 
 async function init() {
-    const modelURL = URL + "model.json";
-    const metadataURL = URL + "metadata.json";
+    try {
+        const modelURL = URL + "model.json";
+        const metadataURL = URL + "metadata.json";
 
-    model = await tmImage.load(modelURL, metadataURL);
+        // load model
+        model = await tmImage.load(modelURL, metadataURL);
 
-    webcam = new tmImage.Webcam(200, 200, true);
-    await webcam.setup();
-    await webcam.play();
+        // setup webcam
+        webcam = new tmImage.Webcam(250, 250, true);
+        await webcam.setup();
+        await webcam.play();
 
-    document.getElementById("webcam-container").appendChild(webcam.canvas);
+        document.getElementById("webcam-container").appendChild(webcam.canvas);
 
-    loop();
+        loop();
+    } catch (err) {
+        console.error("INIT ERROR:", err);
+    }
 }
 
 async function loop() {
@@ -56,34 +67,30 @@ async function loop() {
 }
 
 async function predict() {
-    const prediction = await model.predict(webcam.canvas);
+    try {
+        const prediction = await model.predict(webcam.canvas);
 
-    let bestClass = "";
-    let bestProb = 0;
+        let bestClass = "";
+        let bestProb = 0;
 
-    for (let i = 0; i < prediction.length; i++) {
-        if (prediction[i].probability > bestProb) {
-            bestProb = prediction[i].probability;
-            bestClass = prediction[i].className;
+        // find best prediction
+        for (let i = 0; i < prediction.length; i++) {
+            if (prediction[i].probability > bestProb) {
+                bestProb = prediction[i].probability;
+                bestClass = prediction[i].className;
+            }
         }
+
+        // display ONLY best
+        document.getElementById("result").innerHTML =
+            bestClass.toUpperCase() + " (" + (bestProb * 100).toFixed(2) + "%)";
+
+        // store result globally (for next step ESP)
+        window.currentResult = bestClass;
+
+    } catch (err) {
+        console.error("PREDICT ERROR:", err);
     }
-
-    let output = "NOTHING";
-
-    if (bestProb > 0.85) {
-        if (bestClass.toLowerCase().includes("up")) {
-            output = "UP";
-        } else if (bestClass.toLowerCase().includes("down")) {
-            output = "DOWN";
-        }
-    }
-
-    // SHOW ON SCREEN
-    document.getElementById("result").innerHTML =
-        output + " (" + (bestProb * 100).toFixed(1) + "%)";
-
-    // 🔥 BROADCAST (THIS IS IMPORTANT)
-    window.currentResult = output;
 }
 </script>
 
