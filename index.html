@@ -2,69 +2,57 @@
 <html>
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>AI Vision</title>
+<title>AI Gesture Broadcast</title>
+
 <style>
 body {
-    font-family: Arial;
     text-align: center;
     background: #111;
     color: white;
+    font-family: Arial;
 }
-canvas {
-    border-radius: 12px;
-    margin-top: 10px;
-}
-#status {
-    font-size: 24px;
-    margin-top: 15px;
+#result {
+    font-size: 30px;
+    margin-top: 20px;
 }
 </style>
 </head>
 
 <body>
 
-<h2>AI Camera Running...</h2>
-<div id="webcam-container"></div>
-<div id="label-container"></div>
-<div id="status">Detecting...</div>
+<h2>AI Gesture Broadcast</h2>
+<button onclick="init()">Start</button>
 
-<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest/dist/teachablemachine-image.min.js"></script>
+<div id="webcam-container"></div>
+<div id="result">Waiting...</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest"></script>
+<script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest"></script>
 
 <script>
-const URL = "https://teachablemachine.withgoogle.com/models/Ccfgx1Ac5/";
+const URL = "https://teachablemachine.withgoogle.com/models/gWXOPXYeG/";
 
-let model, webcam, labelContainer, maxPredictions;
-
-let lastState = "";
-let stableCount = 0;
-const STABLE_REQUIRED = 5; // frames to confirm
-const CONFIDENCE_THRESHOLD = 0.85;
+let model, webcam;
 
 async function init() {
     const modelURL = URL + "model.json";
     const metadataURL = URL + "metadata.json";
 
     model = await tmImage.load(modelURL, metadataURL);
-    maxPredictions = model.getTotalClasses();
 
-    webcam = new tmImage.Webcam(250, 250, true);
+    webcam = new tmImage.Webcam(200, 200, true);
     await webcam.setup();
     await webcam.play();
-    window.requestAnimationFrame(loop);
 
     document.getElementById("webcam-container").appendChild(webcam.canvas);
 
-    labelContainer = document.getElementById("label-container");
-    for (let i = 0; i < maxPredictions; i++) {
-        labelContainer.appendChild(document.createElement("div"));
-    }
+    loop();
 }
 
 async function loop() {
     webcam.update();
     await predict();
-    window.requestAnimationFrame(loop);
+    requestAnimationFrame(loop);
 }
 
 async function predict() {
@@ -73,55 +61,30 @@ async function predict() {
     let bestClass = "";
     let bestProb = 0;
 
-    for (let i = 0; i < maxPredictions; i++) {
-        const p = prediction[i];
-        labelContainer.childNodes[i].innerHTML =
-            p.className + ": " + p.probability.toFixed(2);
-
-        if (p.probability > bestProb) {
-            bestProb = p.probability;
-            bestClass = p.className;
+    for (let i = 0; i < prediction.length; i++) {
+        if (prediction[i].probability > bestProb) {
+            bestProb = prediction[i].probability;
+            bestClass = prediction[i].className;
         }
     }
 
-    let currentState = "nothing";
+    let output = "NOTHING";
 
-    if (bestProb > CONFIDENCE_THRESHOLD) {
-        if (bestClass === "up") currentState = "up";
-        else if (bestClass === "down") currentState = "down";
+    if (bestProb > 0.85) {
+        if (bestClass.toLowerCase().includes("up")) {
+            output = "UP";
+        } else if (bestClass.toLowerCase().includes("down")) {
+            output = "DOWN";
+        }
     }
 
-    // ===== STABILITY CHECK =====
-    if (currentState === lastState) {
-        stableCount++;
-    } else {
-        stableCount = 0;
-    }
+    // SHOW ON SCREEN
+    document.getElementById("result").innerHTML =
+        output + " (" + (bestProb * 100).toFixed(1) + "%)";
 
-    if (stableCount >= STABLE_REQUIRED) {
-        updateUI(currentState);
-    }
-
-    lastState = currentState;
+    // 🔥 BROADCAST (THIS IS IMPORTANT)
+    window.currentResult = output;
 }
-
-function updateUI(state) {
-    const status = document.getElementById("status");
-
-    if (state === "up") {
-        status.innerHTML = "👍 THUMBS UP";
-        status.style.color = "lime";
-    } else if (state === "down") {
-        status.innerHTML = "👎 THUMBS DOWN";
-        status.style.color = "red";
-    } else {
-        status.innerHTML = "🤖 NOTHING";
-        status.style.color = "gray";
-    }
-}
-
-// AUTO START
-init();
 </script>
 
 </body>
