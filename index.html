@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>AI Vision Controller</title>
+    <title>AI Vision Auto</title>
     <style>
         body {
             font-family: Arial;
@@ -14,17 +14,11 @@
             margin-top: 20px;
         }
 
-        button, input {
-            margin: 10px;
-            padding: 10px;
-            font-size: 16px;
-        }
-
-        #webcam-container, #image-preview {
+        #webcam-container {
             margin-top: 20px;
         }
 
-        img, canvas {
+        canvas {
             border-radius: 10px;
         }
     </style>
@@ -32,21 +26,17 @@
 
 <body>
 
-    <h1>🔥 AI Vision Controller</h1>
-    <p>Click anywhere to start camera</p>
-
-    <input type="file" id="upload" accept="image/*">
+    <h1>🔥 AI Vision Auto Start</h1>
+    <p>Tap anywhere once to start</p>
 
     <div id="webcam-container"></div>
-    <div id="image-preview"></div>
-
     <h2 id="result">Loading model...</h2>
 
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest"></script>
     <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest"></script>
 
     <script>
-        const URL = "https://teachablemachine.withgoogle.com/models/OEa3xEPNg/";
+        const URL = "https://teachablemachine.withgoogle.com/models/Ccfgx1Ac5/";
 
         let model, webcam, started = false;
 
@@ -55,13 +45,13 @@
             const metadataURL = URL + "metadata.json";
 
             model = await tmImage.load(modelURL, metadataURL);
-            document.getElementById("result").innerText = "Click screen to start camera";
+
+            document.getElementById("result").innerText = "Tap anywhere to start camera";
         }
 
         loadModel();
 
-        // Start camera on first click (browser security requirement)
-        document.body.addEventListener("click", async () => {
+        async function startCamera() {
             if (started) return;
             started = true;
 
@@ -73,40 +63,28 @@
                 await webcam.setup();
                 await webcam.play();
             } catch (e) {
-                document.getElementById("result").innerText = "Camera permission denied ❌";
+                document.getElementById("result").innerText = "Camera blocked ❌";
                 return;
             }
 
             document.getElementById("webcam-container").appendChild(webcam.canvas);
 
             loop();
-        });
+        }
+
+        // 👇 AUTO START ON ANY CLICK / TAP
+        document.body.addEventListener("click", startCamera);
+        document.body.addEventListener("touchstart", startCamera);
 
         async function loop() {
             if (!webcam) return;
+
             webcam.update();
             await predict(webcam.canvas);
+
             requestAnimationFrame(loop);
         }
 
-        // Upload image handler
-        document.getElementById("upload").addEventListener("change", async function(event) {
-            const file = event.target.files[0];
-            if (!file) return;
-
-            const img = document.createElement("img");
-            img.src = URL.createObjectURL(file);
-            img.width = 250;
-
-            document.getElementById("image-preview").innerHTML = "";
-            document.getElementById("image-preview").appendChild(img);
-
-            img.onload = async () => {
-                await predict(img);
-            };
-        });
-
-        // Prediction logic (best result only)
         async function predict(image) {
             if (!model) return;
 
