@@ -34,6 +34,7 @@ body {
 const URL = "https://teachablemachine.withgoogle.com/models/gWXOPXYeG/";
 
 let model, webcam;
+let lastSent = "";
 
 async function init() {
     const modelURL = URL + "model.json";
@@ -57,6 +58,7 @@ async function loop() {
 }
 
 async function predict() {
+
     const prediction = await model.predict(webcam.canvas);
 
     let bestClass = "";
@@ -69,24 +71,27 @@ async function predict() {
         }
     }
 
-    let output = "NONE";
+    let state = "NONE";
 
-    if (bestClass.toLowerCase().includes("up")) output = "UP";
-    else if (bestClass.toLowerCase().includes("down")) output = "DOWN";
+    if (bestClass.toLowerCase().includes("up")) state = "UP";
+    else if (bestClass.toLowerCase().includes("down")) state = "DOWN";
 
-    document.getElementById("result").innerHTML = output;
+    document.getElementById("result").innerHTML =
+        state + " (" + (bestProb * 100).toFixed(2) + "%)";
 
-    sendToESP(output);
+    // 🚀 ONLY SEND IF CHANGED
+    if (state !== lastSent && state !== "NONE") {
+        lastSent = state;
+        sendToPython(state);
+    }
 }
 
-function sendToESP(state) {
+// ✅ SEND TO PYTHON BRIDGE (NOT ESP DIRECT)
+function sendToPython(state) {
+    console.log("Sending:", state);
 
-    let espIP = "http://192.168.0.100"; // CHANGE THIS
-
-    fetch(`${espIP}/${state}`)
-    .then(r => r.text())
-    .then(d => console.log("ESP:", d))
-    .catch(e => console.log("ESP ERROR:", e));
+    fetch("http://127.0.0.1:5000/send?cmd=" + state)
+    .catch(err => console.log("Bridge error:", err));
 }
 </script>
 
