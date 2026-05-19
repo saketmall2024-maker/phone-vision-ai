@@ -13,12 +13,8 @@ body {
 }
 
 #result {
-    font-size: 32px;
+    font-size: 34px;
     margin-top: 20px;
-}
-button {
-    padding: 10px;
-    font-size: 18px;
 }
 </style>
 </head>
@@ -75,33 +71,22 @@ async function predict() {
 
     let output = "NONE";
 
-    if (bestClass.toLowerCase().includes("up")) {
-        output = "UP";
-    } 
-    else if (bestClass.toLowerCase().includes("down")) {
-        output = "DOWN";
-    }
+    if (bestClass.toLowerCase().includes("up")) output = "UP";
+    else if (bestClass.toLowerCase().includes("down")) output = "DOWN";
 
     document.getElementById("result").innerHTML = output;
 
-    // 🔥 ESP BROADCAST HERE
     sendToESP(output);
 }
 
-// 🔥 SEND TO ESP
 function sendToESP(state) {
 
-    let espIP = "http://192.168.0.100";  // CHANGE THIS
+    let espIP = "http://192.168.0.100"; // CHANGE THIS
 
-    let cmd = "/NONE";
-
-    if (state === "UP") cmd = "/UP";
-    else if (state === "DOWN") cmd = "/DOWN";
-
-    fetch(espIP + cmd)
-    .then(res => res.text())
-    .then(data => console.log("ESP:", data))
-    .catch(err => console.log("ESP ERROR:", err));
+    fetch(`${espIP}/${state}`)
+    .then(r => r.text())
+    .then(d => console.log("ESP:", d))
+    .catch(e => console.log("ESP ERROR:", e));
 }
 </script>
 
