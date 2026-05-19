@@ -37,10 +37,7 @@ let model, webcam;
 let lastSent = "";
 
 async function init() {
-    const modelURL = URL + "model.json";
-    const metadataURL = URL + "metadata.json";
-
-    model = await tmImage.load(modelURL, metadataURL);
+    model = await tmImage.load(URL + "model.json", URL + "metadata.json");
 
     webcam = new tmImage.Webcam(250, 250, true);
     await webcam.setup();
@@ -58,7 +55,6 @@ async function loop() {
 }
 
 async function predict() {
-
     const prediction = await model.predict(webcam.canvas);
 
     let bestClass = "";
@@ -71,27 +67,27 @@ async function predict() {
         }
     }
 
-    let state = "NONE";
+    let output = "NONE";
 
-    if (bestClass.toLowerCase().includes("up")) state = "UP";
-    else if (bestClass.toLowerCase().includes("down")) state = "DOWN";
+    if (bestClass.toLowerCase().includes("up")) output = "UP";
+    else if (bestClass.toLowerCase().includes("down")) output = "DOWN";
 
-    document.getElementById("result").innerHTML =
-        state + " (" + (bestProb * 100).toFixed(2) + "%)";
+    document.getElementById("result").innerHTML = output;
 
-    // 🚀 ONLY SEND IF CHANGED
-    if (state !== lastSent && state !== "NONE") {
-        lastSent = state;
-        sendToPython(state);
+    // 🚨 PREVENT SPAM (VERY IMPORTANT FIX)
+    if (output !== lastSent) {
+        lastSent = output;
+        sendToESP(output);
     }
 }
 
-// ✅ SEND TO PYTHON BRIDGE (NOT ESP DIRECT)
-function sendToPython(state) {
-    console.log("Sending:", state);
+function sendToESP(state) {
+    const espIP = "http://192.168.0.100";
 
-    fetch("http://127.0.0.1:5000/send?cmd=" + state)
-    .catch(err => console.log("Bridge error:", err));
+    fetch(`${espIP}/${state}`)
+    .then(r => r.text())
+    .then(d => console.log("ESP:", d))
+    .catch(e => console.log("ESP ERROR:", e));
 }
 </script>
 
