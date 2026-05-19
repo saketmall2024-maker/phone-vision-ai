@@ -25,14 +25,15 @@ button {
 
 <body>
 
-<h2>Gesture AI (Best Prediction Only)</h2>
+<h2>Gesture AI</h2>
 <button onclick="init()">Start</button>
 
 <div id="webcam-container"></div>
 <div id="result">Waiting...</div>
 
-<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest"></script>
-<script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest"></script>
+<!-- ✅ FIXED SCRIPT ORDER + VERSION -->
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@3.9.0/dist/tf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@0.8/dist/teachablemachine-image.min.js"></script>
 
 <script>
 const URL = "https://teachablemachine.withgoogle.com/models/gWXOPXYeG/";
@@ -44,10 +45,8 @@ async function init() {
         const modelURL = URL + "model.json";
         const metadataURL = URL + "metadata.json";
 
-        // load model
         model = await tmImage.load(modelURL, metadataURL);
 
-        // setup webcam
         webcam = new tmImage.Webcam(250, 250, true);
         await webcam.setup();
         await webcam.play();
@@ -73,7 +72,6 @@ async function predict() {
         let bestClass = "";
         let bestProb = 0;
 
-        // find best prediction
         for (let i = 0; i < prediction.length; i++) {
             if (prediction[i].probability > bestProb) {
                 bestProb = prediction[i].probability;
@@ -81,11 +79,9 @@ async function predict() {
             }
         }
 
-        // display ONLY best
         document.getElementById("result").innerHTML =
             bestClass.toUpperCase() + " (" + (bestProb * 100).toFixed(2) + "%)";
 
-        // store result globally (for next step ESP)
         window.currentResult = bestClass;
 
     } catch (err) {
