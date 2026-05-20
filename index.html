@@ -2,44 +2,51 @@
 <html>
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Gesture AI</title>
+<title>Face AI</title>
 
 <style>
 body {
-    text-align: center;
-    background: #111;
+    background: #0f172a;
     color: white;
+    text-align: center;
     font-family: Arial;
 }
 
-#result {
-    font-size: 34px;
+h2 {
     margin-top: 20px;
+}
+
+#result {
+    font-size: 30px;
+    margin-top: 15px;
 }
 </style>
 </head>
 
 <body>
 
-<h2>Gesture AI</h2>
+<h2>Face Recognizer 😎</h2>
 <button onclick="init()">Start</button>
 
 <div id="webcam-container"></div>
 <div id="result">Waiting...</div>
 
-<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@3.9.0/dist/tf.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@0.8/dist/teachablemachine-image.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest/dist/teachablemachine-image.min.js"></script>
 
 <script>
-const URL = "https://teachablemachine.withgoogle.com/models/gWXOPXYeG/";
+const URL = "https://teachablemachine.withgoogle.com/models/O2Ehy__UJ/";
 
 let model, webcam;
-let lastSent = "";
+let lastText = "";
 
 async function init() {
-    model = await tmImage.load(URL + "model.json", URL + "metadata.json");
+    const modelURL = URL + "model.json";
+    const metadataURL = URL + "metadata.json";
 
-    webcam = new tmImage.Webcam(250, 250, true);
+    model = await tmImage.load(modelURL, metadataURL);
+
+    webcam = new tmImage.Webcam(300, 300, true);
     await webcam.setup();
     await webcam.play();
 
@@ -57,37 +64,25 @@ async function loop() {
 async function predict() {
     const prediction = await model.predict(webcam.canvas);
 
-    let bestClass = "";
-    let bestProb = 0;
-
-    for (let i = 0; i < prediction.length; i++) {
-        if (prediction[i].probability > bestProb) {
-            bestProb = prediction[i].probability;
-            bestClass = prediction[i].className;
+    // 🔥 FIND BEST MATCH
+    let best = prediction[0];
+    for (let i = 1; i < prediction.length; i++) {
+        if (prediction[i].probability > best.probability) {
+            best = prediction[i];
         }
     }
 
-    let output = "NONE";
+    // 🔥 FORMAT OUTPUT
+    let name = best.className;
+    let confidence = (best.probability * 100).toFixed(1);
 
-    if (bestClass.toLowerCase().includes("up")) output = "UP";
-    else if (bestClass.toLowerCase().includes("down")) output = "DOWN";
+    let text = `${name} (${confidence}%)`;
 
-    document.getElementById("result").innerHTML = output;
-
-    // 🚨 PREVENT SPAM (VERY IMPORTANT FIX)
-    if (output !== lastSent) {
-        lastSent = output;
-        sendToESP(output);
+    // 🔥 PREVENT SPAM UPDATES
+    if (text !== lastText) {
+        lastText = text;
+        document.getElementById("result").innerHTML = text;
     }
-}
-
-function sendToESP(state) {
-    const espIP = "http://192.168.0.100";
-
-    fetch(`${espIP}/${state}`)
-    .then(r => r.text())
-    .then(d => console.log("ESP:", d))
-    .catch(e => console.log("ESP ERROR:", e));
 }
 </script>
 
