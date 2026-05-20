@@ -18,7 +18,7 @@
             margin-top: 20px;
             font-size: 28px;
             font-weight: bold;
-            padding: 10px;
+            padding: 12px;
             border-radius: 10px;
             display: inline-block;
         }
@@ -43,26 +43,18 @@
 <div id="result" class="denied">ACCESS DENIED 🚫</div>
 
 <script>
-const URL = "https://teachablemachine.withgoogle.com/models/O2Ehy__UJ/";
+const URL = "https://teachablemachine.withgoogle.com/models/vqlFxlMRf/";
 
-let model, webcam, maxPredictions;
+let model, webcam;
 
 let confirmCount = 0;
 let lastState = "";
-
-// 🔊 SPEAK FUNCTION
-function speak(text) {
-    const speech = new SpeechSynthesisUtterance(text);
-    speech.lang = "en-US";
-    window.speechSynthesis.speak(speech);
-}
 
 async function init() {
     const modelURL = URL + "model.json";
     const metadataURL = URL + "metadata.json";
 
     model = await tmImage.load(modelURL, metadataURL);
-    maxPredictions = model.getTotalClasses();
 
     webcam = new tmImage.Webcam(300, 300, true);
     await webcam.setup();
@@ -85,7 +77,7 @@ async function predict() {
     let youProb = 0;
 
     for (let i = 0; i < prediction.length; i++) {
-        if (prediction[i].className === "YOU") {
+        if (prediction[i].className === "SAKET") {
             youProb = prediction[i].probability;
         }
     }
@@ -106,18 +98,15 @@ async function predict() {
 
     let resultDiv = document.getElementById("result");
 
-    // 🔥 UPDATE ONLY WHEN CHANGED
     if (state !== lastState) {
         lastState = state;
 
         if (state === "GRANTED") {
             resultDiv.innerHTML = "WELCOME SAKKU 😎";
             resultDiv.className = "granted";
-            speak("Welcome Sakku");
         } else {
             resultDiv.innerHTML = "ACCESS DENIED 🚫";
             resultDiv.className = "denied";
-            speak("Access Denied");
         }
     }
 }
