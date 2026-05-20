@@ -1,50 +1,68 @@
 <!DOCTYPE html>
 <html>
 <head>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Face AI</title>
+    <title>Face Unlock</title>
 
-<style>
-body {
-    background: #0f172a;
-    color: white;
-    text-align: center;
-    font-family: Arial;
-}
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest/dist/teachablemachine-image.min.js"></script>
 
-h2 {
-    margin-top: 20px;
-}
+    <style>
+        body {
+            text-align: center;
+            background: #111;
+            color: white;
+            font-family: Arial;
+        }
 
-#result {
-    font-size: 30px;
-    margin-top: 15px;
-}
-</style>
+        #result {
+            margin-top: 20px;
+            font-size: 28px;
+            font-weight: bold;
+            padding: 10px;
+            border-radius: 10px;
+            display: inline-block;
+        }
+
+        .granted {
+            background: #00c853;
+        }
+
+        .denied {
+            background: #d50000;
+        }
+    </style>
 </head>
 
 <body>
 
-<h2>Face Recognizer 😎</h2>
+<h1>🔐 Face Unlock System</h1>
+
 <button onclick="init()">Start</button>
 
 <div id="webcam-container"></div>
-<div id="result">Waiting...</div>
-
-<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest/dist/teachablemachine-image.min.js"></script>
+<div id="result" class="denied">ACCESS DENIED 🚫</div>
 
 <script>
 const URL = "https://teachablemachine.withgoogle.com/models/O2Ehy__UJ/";
 
-let model, webcam;
-let lastText = "";
+let model, webcam, maxPredictions;
+
+let confirmCount = 0;
+let lastState = "";
+
+// 🔊 SPEAK FUNCTION
+function speak(text) {
+    const speech = new SpeechSynthesisUtterance(text);
+    speech.lang = "en-US";
+    window.speechSynthesis.speak(speech);
+}
 
 async function init() {
     const modelURL = URL + "model.json";
     const metadataURL = URL + "metadata.json";
 
     model = await tmImage.load(modelURL, metadataURL);
+    maxPredictions = model.getTotalClasses();
 
     webcam = new tmImage.Webcam(300, 300, true);
     await webcam.setup();
@@ -52,36 +70,55 @@ async function init() {
 
     document.getElementById("webcam-container").appendChild(webcam.canvas);
 
-    loop();
+    window.requestAnimationFrame(loop);
 }
 
 async function loop() {
     webcam.update();
     await predict();
-    requestAnimationFrame(loop);
+    window.requestAnimationFrame(loop);
 }
 
 async function predict() {
     const prediction = await model.predict(webcam.canvas);
 
-    // 🔥 FIND BEST MATCH
-    let best = prediction[0];
-    for (let i = 1; i < prediction.length; i++) {
-        if (prediction[i].probability > best.probability) {
-            best = prediction[i];
+    let youProb = 0;
+
+    for (let i = 0; i < prediction.length; i++) {
+        if (prediction[i].className === "YOU") {
+            youProb = prediction[i].probability;
         }
     }
 
-    // 🔥 FORMAT OUTPUT
-    let name = best.className;
-    let confidence = (best.probability * 100).toFixed(1);
+    // 🔐 STABLE DETECTION
+    if (youProb > 0.9) {
+        confirmCount++;
+    } else {
+        confirmCount = 0;
+    }
 
-    let text = `${name} (${confidence}%)`;
+    let state;
+    if (confirmCount > 15) {
+        state = "GRANTED";
+    } else {
+        state = "DENIED";
+    }
 
-    // 🔥 PREVENT SPAM UPDATES
-    if (text !== lastText) {
-        lastText = text;
-        document.getElementById("result").innerHTML = text;
+    let resultDiv = document.getElementById("result");
+
+    // 🔥 UPDATE ONLY WHEN CHANGED
+    if (state !== lastState) {
+        lastState = state;
+
+        if (state === "GRANTED") {
+            resultDiv.innerHTML = "WELCOME SAKKU 😎";
+            resultDiv.className = "granted";
+            speak("Welcome Sakku");
+        } else {
+            resultDiv.innerHTML = "ACCESS DENIED 🚫";
+            resultDiv.className = "denied";
+            speak("Access Denied");
+        }
     }
 }
 </script>
