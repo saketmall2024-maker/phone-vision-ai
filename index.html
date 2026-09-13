@@ -13,7 +13,7 @@
             justify-content: center;
             min-height: 100vh;
             margin: 0;
-            background-color: #f0f2f5; /* Clean, locked background */
+            background-color: #f0f2f5;
             color: #333;
         }
         .container {
@@ -75,7 +75,7 @@
 </div>
 
 <script>
-    // 1. The Pre-made Color Model Dataset (Removed Grey for cleaner classifications)
+    // 1. Core vibrant color reference palette
     const colorDataset = [
         { name: "Red", r: 255, g: 0, b: 0 },
         { name: "Green", r: 0, g: 255, b: 0 },
@@ -83,13 +83,10 @@
         { name: "Yellow", r: 255, g: 255, b: 0 },
         { name: "Cyan", r: 0, g: 255, b: 255 },
         { name: "Magenta", r: 255, g: 0, b: 255 },
-        { name: "White", r: 255, g: 255, b: 255 },
-        { name: "Black", r: 0, g: 0, b: 0 },
         { name: "Orange", r: 255, g: 165, b: 0 },
         { name: "Purple", r: 128, g: 0, b: 128 },
         { name: "Pink", r: 255, g: 192, b: 203 },
-        { name: "Turquoise", r: 64, g: 224, b: 208 },
-        { name: "Brown", r: 165, g: 42, b: 42 }
+        { name: "Turquoise", r: 64, g: 224, b: 208 }
     ];
 
     const video = document.getElementById('webcam');
@@ -97,7 +94,7 @@
     const ctx = canvas.getContext('2d', { willReadFrequently: true });
     const resultPanel = document.getElementById('result');
 
-    // 2. Initialize and request device camera permissions
+    // Initialize camera permissions
     async function setupCamera() {
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ 
@@ -111,16 +108,49 @@
         }
     }
 
-    // 3. Prediction Engine: Find closest color coordinates via Euclidean Distance
-    function predictColorName(inputR, inputG, inputB) {
+    // 2. High-Accuracy Prediction Engine with Tight Threshold Rules
+    function predictColorName(r, g, b) {
+        const maxVal = Math.max(r, g, b);
+        const minVal = Math.min(r, g, b);
+        const chroma = maxVal - minVal; // Difference between brightest and darkest subpixel
+
+        // --- RULE 1: High/Tight Black Threshold ---
+        // If all channels are below 45, it is explicitly a true black shadow.
+        if (maxVal < 45) {
+            return "Black";
+        }
+
+        // --- RULE 2: High/Tight White Threshold ---
+        // If all channels are extremely bright and closely packed, it is true white.
+        if (minVal > 220 && chroma < 20) {
+            return "White";
+        }
+
+        // --- RULE 3: Tight Neutral Grey Filtering ---
+        // If color saturation (chroma) is low, it means the color components are too well-balanced.
+        // Instead of picking a color name randomly, catch it here.
+        if (chroma < 30) {
+            if (maxVal > 160) return "Light Grey";
+            if (maxVal > 90) return "Grey";
+            return "Dark Grey";
+        }
+
+        // --- RULE 4: Tight Brown Filtering ---
+        // Brown is just dark, desaturated orange/red. Let's isolate it explicitly.
+        if (r > g && g >= b && r < 140 && chroma < 65) {
+            return "Brown";
+        }
+
+        // --- RULE 5: Vibrant Color Matching ---
+        // If it passes all neutral filters, map it to the nearest true color profile.
         let minDistance = Infinity;
         let closestColor = "Unknown";
 
         for (const color of colorDataset) {
             const distance = Math.sqrt(
-                Math.pow(inputR - color.r, 2) +
-                Math.pow(inputG - color.g, 2) +
-                Math.pow(inputB - color.b, 2)
+                Math.pow(r - color.r, 2) +
+                Math.pow(g - color.g, 2) +
+                Math.pow(b - color.b, 2)
             );
 
             if (distance < minDistance) {
@@ -131,35 +161,31 @@
         return closestColor;
     }
 
-    // 4. Mouse click coordinate capture routine
+    // Mouse click processing
     video.addEventListener('click', (event) => {
         const rect = video.getBoundingClientRect();
         const x = ((event.clientX - rect.left) / rect.width) * canvas.width;
         const y = ((event.clientY - rect.top) / rect.height) * canvas.height;
 
-        // Draw current frame silently onto backing memory layer
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
         
-        // FIXED: Extracting actual numerical indexes from the pixel array
         const pixel = ctx.getImageData(x, y, 1, 1).data;
         const r = pixel[0];
         const g = pixel[1];
         const b = pixel[2];
 
-        // Trigger evaluation pipeline
+        // Process through strict rules
         const detectedColor = predictColorName(r, g, b);
 
-        // Update display state (Only changes the banner, page background stays locked)
+        // Update UI panels
         resultPanel.innerText = `Detected: ${detectedColor} (R:${r} G:${g} B:${b})`;
         resultPanel.style.backgroundColor = `rgb(${r}, ${g}, ${b})`;
         
-        // Dynamically shift text color contrast weight so it is readable on dark/light targets
         const brightness = (r * 299 + g * 587 + b * 114) / 1000;
         resultPanel.style.color = brightness > 125 ? '#000000' : '#ffffff';
         resultPanel.style.borderColor = `rgb(${r}, ${g}, ${b})`;
     });
 
-    // Start script
     setupCamera();
 </script>
 
