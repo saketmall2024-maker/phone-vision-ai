@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Live ML Color Detection Pipeline</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            background-color: #f0f2f5;
+            color: #333;
+        }
+        .container {
+            text-align: center;
+            background: white;
+            padding: 24px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        h1 { margin-bottom: 8px; font-size: 24px; }
+        p { color: #666; margin-bottom: 20px; }
+        .video-wrapper {
+            position: relative;
+            display: inline-block;
+            cursor: crosshair;
+            border-radius: 8px;
+            overflow: hidden;
+            background: #000;
+        }
+        video {
+            display: block;
+            max-width: 100%;
+            height: auto;
+        }
+        canvas {
+            display: none;
+        }
+        .result-panel {
+            margin-top: 20px;
+            padding: 16px;
+            border-radius: 8px;
+            font-size: 20px;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            border: 2px solid #ddd;
+            display: inline-block;
+            min-width: 250px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>ML Color Detector</h1>
+    <p>Click anywhere directly on the live video stream below to classify the color.</p>
+    
+    <div class="video-wrapper">
+        <video id="webcam" autoplay playsinline width="640" height="480"></video>
+    </div>
+
+    <!-- Hidden canvas used to extract pixel data programmatically -->
+    <canvas id="captureCanvas" width="640" height="480"></canvas>
+
+    <div id="result" class="result-panel">
+        Click video to detect color
+    </div>
+</div>
+
+<script>
+    // 1. The Pre-made Color Model Dataset (Embedded Matrix)
+    const colorDataset = [
+        { name: "Red", r: 255, g: 0, b: 0 },
+        { name: "Green", r: 0, g: 255, b: 0 },
+        { name: "Blue", r: 0, g: 0, b: 255 },
+        { name: "Yellow", r: 255, g: 255, b: 0 },
+        { name: "Cyan", r: 0, g: 255, b: 255 },
+        { name: "Magenta", r: 255, g: 0, b: 255 },
+        { name: "White", r: 255, g: 255, b: 255 },
+        { name: "Black", r: 0, g: 0, b: 0 },
+        { name: "Orange", r: 255, g: 165, b: 0 },
+        { name: "Purple", r: 128, g: 0, b: 128 },
+        { name: "Pink", r: 255, g: 192, b: 203 },
+        { name: "Turquoise", r: 64, g: 224, b: 208 },
+        { name: "Grey", r: 128, g: 128, b: 128 },
+        { name: "Brown", r: 165, g: 42, b: 42 }
+    ];
+
+    const video = document.getElementById('webcam');
+    const canvas = document.getElementById('captureCanvas');
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    const resultPanel = document.getElementById('result');
+
+    // 2. Initialize and request device camera permissions
+    async function setupCamera() {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ 
+                video: { width: 640, height: 480, facingMode: "user" }, 
+                audio: false 
+            });
+            video.srcObject = stream;
+        } catch (err) {
+            resultPanel.innerText = "Error: Camera access denied or unavailable.";
+            resultPanel.style.background = "#ffdddd";
+        }
+    }
+
+    // 3. Prediction Engine: Find closest color coordinates via Euclidean Distance
+    function predictColorName(inputR, inputG, inputB) {
+        let minDistance = Infinity;
+        let closestColor = "Unknown";
+
+        for (const color of colorDataset) {
+            const distance = Math.sqrt(
+                Math.pow(inputR - color.r, 2) +
+                Math.pow(inputG - color.g, 2) +
+                Math.pow(inputB - color.b, 2)
+            );
+
+            if (distance < minDistance) {
+                minDistance = distance;
+                closestColor = color.name;
+            }
+        }
+        return closestColor;
+    }
+
+    // 4. Mouse click coordinate capture routine
+    video.addEventListener('click', (event) => {
+        // Handle coordinates scale transformations safely if window size shrinks
+        const rect = video.getBoundingClientRect();
+        const x = ((event.clientX - rect.left) / rect.width) * canvas.width;
+        const y = ((event.clientY - rect.top) / rect.height) * canvas.height;
+
+        // Draw current frame silently onto backing memory layer
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        
+        // Extract raw 1x1 pixel image data array array from mouse position
+        const pixel = ctx.getImageData(x, y, 1, 1).data;
+        const r = pixel[0];
+        const g = pixel[1];
+        const b = pixel[2];
+
+        // Trigger evaluation pipeline
+        const detectedColor = predictColorName(r, g, b);
+
+        // Update application layout display state
+        resultPanel.innerText = `Detected: ${detectedColor} (R:${r} G:${g} B:${b})`;
+        resultPanel.style.backgroundColor = `rgb(${r}, ${g}, ${b})`;
+        
+        // Dynamically shift font contrast weight for high readability
+        const brightness = (r * 299 + g * 587 + b * 114) / 1000;
+        resultPanel.style.color = brightness > 125 ? '#000000' : '#ffffff';
+    });
+
+    // Start script
+    setupCamera();
+</script>
+
+</body>
+</html>
